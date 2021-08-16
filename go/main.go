@@ -261,7 +261,7 @@ func main() {
 	}
 
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
-	e.Logger.Fatal(e.Start(serverPort))
+	e.Logger.Fatal(e.StartTLS(serverPort, "/etc/nginx/certificates/tls-cert.pem", "/etc/nginx/certificates/tls-key.pem"))
 }
 
 func getSession(r *http.Request) (*sessions.Session, error) {
@@ -1087,7 +1087,7 @@ var trendCache []byte
 func calcTrend() {
 loopstart:
 	for {
-		time.Sleep(3*time.Millisecond)
+		time.Sleep(3 * time.Millisecond)
 		characterList := []Isu{}
 		err := db.Select(&characterList, "SELECT `character` FROM `isu` GROUP BY `character`")
 		if err != nil {
