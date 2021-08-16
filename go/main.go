@@ -639,7 +639,7 @@ func postIsu(c echo.Context) error {
 	defer tx.Rollback()
 
 	_, err = tx.Exec("INSERT INTO `isu`"+
-		"	(`jia_isu_uuid`, `name`, `image_hash`, `character`, `jia_user_id`) VALUES (?, ?, ?, ?, ?, ?)",
+		"	(`jia_isu_uuid`, `name`, `image_hash`, `character`, `jia_user_id`) VALUES (?, ?, ?, ?, ?)",
 		jiaIsuUUID, isuName, imageHash, "", jiaUserID)
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
