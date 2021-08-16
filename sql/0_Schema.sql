@@ -38,6 +38,8 @@ CREATE TABLE `isu_association_config` (
   `url` VARCHAR(255) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
+
+ALTER TABLE `isu` ADD INDEX chara(`character`);
 ALTER TABLE `isu_condition` ADD INDEX idtime(`jia_isu_uuid` DESC, `timestamp` DESC);
 
 

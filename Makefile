@@ -1,5 +1,5 @@
 
-DB_HOST:=192.168.0.42
+DB_HOST:=192.168.0.43
 DB_PORT:=3306
 DB_USER:=isucon
 DB_PASS:=isucon
