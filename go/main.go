@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/md5"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,6 +37,7 @@ const (
 	frontendContentsPath        = "../public"
 	jiaJWTSigningKeyPath        = "../ec256-public.pem"
 	defaultIconFilePath         = "../NoImage.jpg"
+	iconFilePath                = "../public/image"
 	defaultJIAServiceURL        = "http://localhost:5000"
 	mysqlErrNumDuplicateEntry   = 1062
 	conditionLevelInfo          = "info"
@@ -53,6 +56,7 @@ var (
 	jiaJWTSigningKey *ecdsa.PublicKey
 
 	postIsuConditionTargetBaseURL string // JIAへのactivate時に登録する，ISUがconditionを送る先のURL
+	defaultIconHash               string
 )
 
 type Config struct {
@@ -65,6 +69,7 @@ type Isu struct {
 	JIAIsuUUID string    `db:"jia_isu_uuid" json:"jia_isu_uuid"`
 	Name       string    `db:"name" json:"name"`
 	Image      []byte    `db:"image" json:"-"`
+	ImageHash  string    `db:"image_hash" json:"-"`
 	Character  string    `db:"character" json:"character"`
 	JIAUserID  string    `db:"jia_user_id" json:"-"`
 	CreatedAt  time.Time `db:"created_at" json:"-"`
@@ -209,6 +214,14 @@ func init() {
 	}
 
 	go calcTrend()
+
+	// デフォルト画像を準備
+	image, err := ioutil.ReadFile(defaultIconFilePath)
+	if err != nil {
+		log.Fatalf("failed to read default icon: %v", err)
+	}
+	hash := md5.Sum(image)
+	defaultIconHash = hex.EncodeToString(hash[:])
 }
 
 func main() {
@@ -333,6 +346,38 @@ func postInitialize(c echo.Context) error {
 		"jia_service_url",
 		request.JIAServiceURL,
 	)
+	if err != nil {
+		c.Logger().Errorf("db error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	//DBから画像書き出し
+	{
+		rows, err := db.Queryx("SELECT image FROM isu")
+		if err != nil {
+			log.Fatal(err)
+		}
+		var image []byte
+		for rows.Next() {
+			err := rows.Scan(&image)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			hash := md5.Sum(image)
+			path := iconFilePath + "/" + hex.EncodeToString(hash[:])
+			_, err = os.Stat(path)
+			if err == nil {
+				continue //ファイルが存在する
+			}
+			err = ioutil.WriteFile(path, image, 0666)
+			if err != nil {
+				c.Logger().Errorf("WriteFile error: %v", err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
+		}
+	}
+	_, err = db.Exec("ALTER TABLE `isu` DROP `image`")
 	if err != nil {
 		c.Logger().Errorf("db error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -553,14 +598,9 @@ func postIsu(c echo.Context) error {
 		useDefaultImage = true
 	}
 
-	var image []byte
+	imageHash := defaultIconHash
 
 	if useDefaultImage {
-		image, err = ioutil.ReadFile(defaultIconFilePath)
-		if err != nil {
-			c.Logger().Error(err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
 	} else {
 		file, err := fh.Open()
 		if err != nil {
@@ -569,10 +609,25 @@ func postIsu(c echo.Context) error {
 		}
 		defer file.Close()
 
-		image, err = ioutil.ReadAll(file)
+		image, err := ioutil.ReadAll(file)
 		if err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
+		}
+
+		hash := md5.Sum(image)
+		imageHash = hex.EncodeToString(hash[:])
+
+		path := iconFilePath + "/" + imageHash
+		_, err = os.Stat(path)
+		if err == nil {
+			//ファイルが存在する
+		} else {
+			err = ioutil.WriteFile(path, image, 0666)
+			if err != nil {
+				c.Logger().Errorf("WriteFile error: %v", err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
 		}
 	}
 
@@ -584,8 +639,8 @@ func postIsu(c echo.Context) error {
 	defer tx.Rollback()
 
 	_, err = tx.Exec("INSERT INTO `isu`"+
-		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
-		jiaIsuUUID, isuName, image, jiaUserID)
+		"	(`jia_isu_uuid`, `name`, `image_hash`, `character`, `jia_user_id`) VALUES (?, ?, ?, ?, ?, ?)",
+		jiaIsuUUID, isuName, imageHash, "", jiaUserID)
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
 
@@ -707,8 +762,8 @@ func getIsuIcon(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
-	var image []byte
-	err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	var image_hash string
+	err = db.Get(&image_hash, "SELECT `image_hash` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ? AND `is_deleted` = false",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -718,8 +773,7 @@ func getIsuIcon(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
-	return c.Blob(http.StatusOK, "", image)
+	return c.File(iconFilePath + "/" + image_hash)
 }
 
 // GET /api/isu/:jia_isu_uuid/graph
