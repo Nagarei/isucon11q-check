@@ -1279,7 +1279,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
-	data := make([]interface{}, len(req)*5)
+	data := make([]interface{}, 0, len(req)*5)
 	for _, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)
 
