@@ -41,6 +41,6 @@ CREATE TABLE `isu_association_config` (
 
 
 ALTER TABLE `isu` ADD INDEX chara(`character`);
-ALTER TABLE `isu_condition` ADD INDEX idtime(`jia_isu_uuid` DESC, `timestamp` DESC);
+-- ALTER TABLE `isu_condition` ADD INDEX idtime(`jia_isu_uuid` DESC, `timestamp` DESC);
 
 
