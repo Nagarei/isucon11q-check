@@ -1293,6 +1293,9 @@ func insertIsuCondition() {
 	}
 }
 
+var isuListMutex sync.RWMutex
+var isuList = make(map[string]struct{})
+
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
@@ -1311,16 +1314,24 @@ func postIsuCondition(c echo.Context) error {
 	}
 	go func() {
 
-		var count int
-		err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
-		if err != nil {
-			log.Print(err)
-			return
-			// c.Logger().Errorf("db error: %v", err)
-			// return c.NoContent(http.StatusInternalServerError)
-		}
-		if count == 0 {
-			return
+		isuListMutex.RLock()
+		_, ok := isuList[jiaIsuUUID]
+		isuListMutex.RUnlock()
+		if !ok {
+			var count int
+			err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+			if err != nil {
+				log.Print(err)
+				return
+				// c.Logger().Errorf("db error: %v", err)
+				// return c.NoContent(http.StatusInternalServerError)
+			}
+			if count == 0 {
+				return
+			}
+			isuListMutex.Lock()
+			isuList[jiaIsuUUID] = struct{}{}
+			isuListMutex.Lock()
 		}
 
 		data := make([]string, 0, len(req)*6)
