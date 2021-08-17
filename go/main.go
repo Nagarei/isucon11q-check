@@ -1174,6 +1174,7 @@ loopstart:
 		err := db.Select(&conditions,
 			"SELECT ic.*, i.`character`, i.id AS `isu_id` FROM isu_condition ic JOIN (SELECT ic.jia_isu_uuid, MAX(ic.timestamp) AS `max_timestamp` FROM isu_condition ic GROUP BY ic.jia_isu_uuid) m ON m.jia_isu_uuid = ic.jia_isu_uuid AND m.max_timestamp = ic.timestamp JOIN isu i on ic.jia_isu_uuid = i.jia_isu_uuid")
 		if err != nil {
+			log.Print(err)
 			continue loopstart
 		}
 		m := make(map[string]*TrendResponse)
@@ -1224,6 +1225,7 @@ loopstart:
 		}
 		bytes, err := json.Marshal(res)
 		if err != nil {
+			log.Print(err)
 			//c.Logger().Error(err)
 			//return c.NoContent(http.StatusInternalServerError)
 			continue loopstart
