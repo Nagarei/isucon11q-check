@@ -196,9 +196,6 @@ func NewMySQLConnectionEnv() *MySQLConnectionEnv {
 	}
 }
 
-var isuListMutex sync.Mutex
-var isuList = make(map[string]struct{})
-
 func (mc *MySQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
 	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=true&loc=Asia%%2FTokyo&interpolateParams=true", mc.User, mc.Password, mc.Host, mc.Port, mc.DBName)
 	return sqlx.Open("mysql", dsn)
@@ -716,9 +713,6 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	isuListMutex.Lock()
-	isuList[jiaIsuUUID] = struct{}{}
-	isuListMutex.Unlock()
 
 	return c.JSON(http.StatusCreated, isu)
 }
@@ -1317,21 +1311,15 @@ func postIsuCondition(c echo.Context) error {
 	}
 	go func() {
 
-		// var count int
-		// err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
-		// if err != nil {
-		// 	log.Print(err)
-		// 	return
-		// 	// c.Logger().Errorf("db error: %v", err)
-		// 	// return c.NoContent(http.StatusInternalServerError)
-		// }
-		// if count == 0 {
-		// 	return
-		// }
-		isuListMutex.Lock()
-		_, ok := isuList[jiaIsuUUID]
-		isuListMutex.Unlock()
-		if !ok {
+		var count int
+		err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err != nil {
+			log.Print(err)
+			return
+			// c.Logger().Errorf("db error: %v", err)
+			// return c.NoContent(http.StatusInternalServerError)
+		}
+		if count == 0 {
 			return
 		}
 
