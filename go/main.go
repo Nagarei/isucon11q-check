@@ -1154,7 +1154,7 @@ var trendCacheMutex sync.RWMutex
 var trendCache []byte
 
 func calcTrend() {
-//	return
+	//	return
 loopstart:
 	for {
 		time.Sleep(3 * time.Millisecond)
@@ -1332,7 +1332,7 @@ func postIsuCondition(c echo.Context) error {
 			}
 			isuListMutex.Lock()
 			isuList[jiaIsuUUID] = struct{}{}
-			isuListMutex.Lock()
+			isuListMutex.Unlock()
 		}
 
 		data := make([]string, 0, len(req)*6)
