@@ -1250,28 +1250,43 @@ func getTrend(c echo.Context) error {
 }
 
 var insertDataMutex sync.Mutex
-var insertData = []interface{}{}
+var insertData = []string{}
 
 func init() {
 	go insertIsuCondition()
 }
 func insertIsuCondition() {
+	var sb strings.Builder
 	for {
+		sb.Reset()
 		insertDataMutex.Lock()
 		data := insertData
-		insertData = make([]interface{}, 0, cap(data))
+		insertData = make([]string, 0, cap(data))
 		insertDataMutex.Unlock()
 
 		if len(data) == 0 {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
+		count := 0
+		for _, str := range data {
+			if count == 0 {
+				sb.WriteString(",(")
+			} else {
+				sb.WriteString(",")
+			}
+			sb.WriteString(str)
+
+			count++
+			if count == 6 {
+				sb.WriteString(")")
+				count = 0
+			}
+		}
 		_, err := db.Exec(
-			"INSERT INTO `isu_condition`"+
-				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-				"	VALUES "+
-				strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(data)/6)[1:],
-			data...)
+			"INSERT INTO `isu_condition`" +
+				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+				"	VALUES " + sb.String())
 		if err != nil {
 			log.Print(err)
 		}
@@ -1308,7 +1323,7 @@ func postIsuCondition(c echo.Context) error {
 			return
 		}
 
-		data := make([]interface{}, 0, len(req)*6)
+		data := make([]string, 0, len(req)*6)
 		for _, cond := range req {
 			timestamp := time.Unix(cond.Timestamp, 0)
 
@@ -1327,7 +1342,12 @@ func postIsuCondition(c echo.Context) error {
 				cLevel = "c"
 			}
 
-			data = append(data, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cLevel, cond.Message)
+			sitting := "false"
+			if cond.IsSitting {
+				sitting = "ture"
+			}
+
+			data = append(data, jiaIsuUUID, timestamp.Format("2006-01-02 15:04:05"), sitting, cond.Condition, cLevel, cond.Message)
 
 		}
 
