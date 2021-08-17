@@ -1259,9 +1259,7 @@ func init() {
 	go insertIsuCondition()
 }
 func insertIsuCondition() {
-	var sb strings.Builder
 	for {
-		sb.Reset()
 		insertDataMutex.Lock()
 		data2 := insertData
 		insertData = make([]string, 0, cap(data2))
@@ -1272,33 +1270,36 @@ func insertIsuCondition() {
 			continue
 		}
 		for start := 0; start < len(data2); start += 100000 {
-			end := start + 100000
-			if len(data2) < end {
-				end = len(data2)
-			}
-			data := data2[start:end]
-			count := 0
-			for _, str := range data {
-				if count == 0 {
-					sb.WriteString(`,("`)
-				} else {
-					sb.WriteString(`","`)
+			go func(start int, data2 []string) {
+				end := start + 100000
+				if len(data2) < end {
+					end = len(data2)
 				}
-				sb.WriteString(str)
+				data := data2[start:end]
+				count := 0
+				var sb strings.Builder
+				for _, str := range data {
+					if count == 0 {
+						sb.WriteString(`,("`)
+					} else {
+						sb.WriteString(`","`)
+					}
+					sb.WriteString(str)
 
-				count++
-				if count == 6 {
-					sb.WriteString(`")`)
-					count = 0
+					count++
+					if count == 6 {
+						sb.WriteString(`")`)
+						count = 0
+					}
 				}
-			}
-			_, err := db.Exec(
-				"INSERT INTO `isu_condition`" +
-					"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
-					"	VALUES " + sb.String()[1:])
-			if err != nil {
-				log.Printf("%v: %v", len(data), err)
-			}
+				_, err := db.Exec(
+					"INSERT INTO `isu_condition`" +
+						"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+						"	VALUES " + sb.String()[1:])
+				if err != nil {
+					log.Printf("%v: %v", len(data), err)
+				}
+			}(start, data2)
 		}
 	}
 }
