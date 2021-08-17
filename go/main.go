@@ -823,6 +823,7 @@ func getIsuGraph(c echo.Context) error {
 // グラフのデータ点を一日分生成
 func generateIsuGraphResponse(jiaIsuUUID string, graphDate time.Time) ([]GraphResponse, error) {
 	retry := true
+	retryCount := 0
 	var responseList []GraphResponse
 retry_loop:
 	for retry {
@@ -860,8 +861,10 @@ retry_loop:
 							StartAt:             startTimeInThisHour,
 							Data:                data,
 							ConditionTimestamps: timestampsInThisHour})
-				} else {
+				} else if retryCount < 2 {
 					retry = true
+					retryCount++
+					time.Sleep(20 * time.Millisecond)
 					continue retry_loop
 				}
 
