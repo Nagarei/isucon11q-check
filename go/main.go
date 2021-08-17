@@ -1271,22 +1271,22 @@ func insertIsuCondition() {
 		count := 0
 		for _, str := range data {
 			if count == 0 {
-				sb.WriteString(",(")
+				sb.WriteString(`,("`)
 			} else {
-				sb.WriteString(",")
+				sb.WriteString(`","`)
 			}
 			sb.WriteString(str)
 
 			count++
 			if count == 6 {
-				sb.WriteString(")")
+				sb.WriteString(`")`)
 				count = 0
 			}
 		}
 		_, err := db.Exec(
 			"INSERT INTO `isu_condition`" +
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
-				"	VALUES " + sb.String())
+				"	VALUES " + sb.String()[1:])
 		if err != nil {
 			log.Print(err)
 		}
