@@ -1261,7 +1261,7 @@ func insertIsuCondition() {
 		insertData = make([]interface{}, 0, cap(data))
 		insertDataMutex.Unlock()
 
-		if len(insertData) == 0 {
+		if len(data) == 0 {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
