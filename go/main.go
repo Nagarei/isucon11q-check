@@ -1159,15 +1159,16 @@ loopstart:
 	for {
 		time.Sleep(3 * time.Millisecond)
 		type IsuConditionWithCharacter struct {
-			ID         int       `db:"id"`
-			JIAIsuUUID string    `db:"jia_isu_uuid"`
-			Timestamp  time.Time `db:"timestamp"`
-			IsSitting  bool      `db:"is_sitting"`
-			Condition  string    `db:"condition"`
-			Message    string    `db:"message"`
-			CreatedAt  time.Time `db:"created_at"`
-			Character  string    `db:"character"`
-			IsuID      int       `db:"isu_id"`
+			ID             int       `db:"id"`
+			JIAIsuUUID     string    `db:"jia_isu_uuid"`
+			Timestamp      time.Time `db:"timestamp"`
+			IsSitting      bool      `db:"is_sitting"`
+			Condition      string    `db:"condition"`
+			ConditionLevel string    `db:"condition_level"`
+			Message        string    `db:"message"`
+			CreatedAt      time.Time `db:"created_at"`
+			Character      string    `db:"character"`
+			IsuID          int       `db:"isu_id"`
 		}
 		var conditions []IsuConditionWithCharacter
 		err := db.Select(&conditions,
@@ -1186,19 +1187,18 @@ loopstart:
 				}
 			}
 
-			warnCount := strings.Count(cond.Condition, "=true")
-			switch warnCount {
-			case 0:
+			switch cond.ConditionLevel[0] {
+			case 'i':
 				m[cond.Character].Info = append(m[cond.Character].Info, &TrendCondition{
 					ID:        cond.IsuID,
 					Timestamp: cond.Timestamp.Unix(),
 				})
-			case 1, 2:
+			case 'w':
 				m[cond.Character].Warning = append(m[cond.Character].Warning, &TrendCondition{
 					ID:        cond.IsuID,
 					Timestamp: cond.Timestamp.Unix(),
 				})
-			case 3:
+			case 'c':
 				m[cond.Character].Critical = append(m[cond.Character].Critical, &TrendCondition{
 					ID:        cond.IsuID,
 					Timestamp: cond.Timestamp.Unix(),
