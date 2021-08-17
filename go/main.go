@@ -1249,6 +1249,35 @@ func getTrend(c echo.Context) error {
 	//return c.JSON(http.StatusOK, res)
 }
 
+var insertDataMutex sync.Mutex
+var insertData = []interface{}{}
+
+func init() {
+	go insertIsuCondition()
+}
+func insertIsuCondition() {
+	for {
+		insertDataMutex.Lock()
+		data := insertData
+		insertData = make([]interface{}, 0, cap(data))
+		insertDataMutex.Unlock()
+
+		if len(insertData) == 0 {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		_, err := db.Exec(
+			"INSERT INTO `isu_condition`"+
+				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+				"	VALUES "+
+				strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(data))[1:],
+			data...)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
@@ -1305,16 +1334,19 @@ func postIsuCondition(c echo.Context) error {
 
 	}
 
-	_, err = db.Exec(
-		"INSERT INTO `isu_condition`"+
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-			"	VALUES "+
-			strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(req))[1:],
-		data...)
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	insertDataMutex.Lock()
+	insertData = append(insertData, data...)
+	insertDataMutex.Unlock()
+	// _, err = db.Exec(
+	// 	"INSERT INTO `isu_condition`"+
+	// 		"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+	// 		"	VALUES "+
+	// 		strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(req))[1:],
+	// 	data...)
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	return c.NoContent(http.StatusCreated)
 }
