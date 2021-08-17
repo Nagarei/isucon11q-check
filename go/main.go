@@ -1154,6 +1154,7 @@ var trendCacheMutex sync.RWMutex
 var trendCache []byte
 
 func calcTrend() {
+//	return
 loopstart:
 	for {
 		time.Sleep(3 * time.Millisecond)
@@ -1342,9 +1343,9 @@ func postIsuCondition(c echo.Context) error {
 				cLevel = "c"
 			}
 
-			sitting := "false"
+			sitting := "0"
 			if cond.IsSitting {
-				sitting = "ture"
+				sitting = "1"
 			}
 
 			data = append(data, jiaIsuUUID, timestamp.Format("2006-01-02 15:04:05"), sitting, cond.Condition, cLevel, cond.Message)
