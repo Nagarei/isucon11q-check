@@ -1242,8 +1242,9 @@ func getTrend(c echo.Context) error {
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
 	trendCacheMutex.RLock()
-	defer trendCacheMutex.RUnlock()
-	_, err := c.Response().Write(trendCache)
+	bytes := trendCache
+	trendCacheMutex.RUnlock()
+	_, err := c.Response().Write(bytes)
 	return err
 	//return c.JSON(http.StatusOK, res)
 }
@@ -1269,7 +1270,7 @@ func insertIsuCondition() {
 			"INSERT INTO `isu_condition`"+
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
 				"	VALUES "+
-				strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(data))[1:],
+				strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(data)/6)[1:],
 			data...)
 		if err != nil {
 			log.Print(err)
