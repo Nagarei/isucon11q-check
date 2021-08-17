@@ -1186,6 +1186,9 @@ loopstart:
 					Critical:  make([]*TrendCondition, 0, 100),
 				}
 			}
+			if len(cond.ConditionLevel) == 0 {
+				continue
+			}
 
 			switch cond.ConditionLevel[0] {
 			case 'i':
