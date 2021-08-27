@@ -87,7 +87,7 @@ alp_install:
 	rm alp_linux_amd64.zip alp
 
 ALPSORT=sum
-ALPM="/api/isu/.+/icon,/api/isu/.+/graph,/api/isu/.+/condition,/api/isu/[-a-z0-9]+,/api/condition/[-a-z0-9]+,/api/catalog/.+,/api/condition\?"
+ALPM="/api/isu/.+/icon,/api/isu/.+/graph,/api/isu/.+/condition,/api/isu/[-a-z0-9]+,/api/condition/[-a-z0-9]+,/api/catalog/.+,/api/condition\?,/isu/........-....-.+"
 OUTFORMAT=count,method,uri,min,max,sum,avg,p99
 .PHONY: alp
 alp:
