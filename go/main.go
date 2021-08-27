@@ -1217,20 +1217,20 @@ func getTrend(c echo.Context) error {
 	//return c.JSON(http.StatusOK, res)
 }
 
-var insertState []*sql.Stmt
+var insertState2000 *sql.Stmt
 
 func prepareInsert() {
-	insertState = make([]*sql.Stmt, 2000)
-	for i := 1; i < 2000; i++ {
-		var err error
-		insertState[i], err = db.Prepare(
-			"INSERT INTO `isu_condition`" +
-				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
-				"	VALUES " +
-				strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
-		if err != nil {
-			panic(err)
-		}
+	// insertState = make([]*sql.Stmt, 2000)
+	// for i := 1; i < 2000; i++ {
+	// }
+	var err error
+	insertState2000, err = db.Prepare(
+		"INSERT INTO `isu_condition`" +
+			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+			"	VALUES " +
+			strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -1251,21 +1251,27 @@ func insertIsuCondition() {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		for i := 0; i < len(data); i += 6 * 1000 {
-			end := i + 6*1000
+		for i := 0; i < len(data); i += 6 * 2000 {
+			end := i + 6*2000
 			if len(data) < end {
 				end = len(data)
 			}
 			dataInsert := data[i:end]
-			// _, err := db.Exec(
-			// 	"INSERT INTO `isu_condition`"+
-			// 		"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-			// 		"	VALUES "+
-			// 		strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(dataInsert)/6)[1:],
-			// 	dataInsert...)
-			_, err := insertState[len(dataInsert)/6].Exec(dataInsert...)
-			if err != nil {
-				log.Print(err)
+			if end-i == 6*2000 {
+				_, err := insertState2000.Exec(dataInsert...)
+				if err != nil {
+					log.Print(err)
+				}
+			} else {
+				_, err := db.Exec(
+					"INSERT INTO `isu_condition`"+
+						"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+						"	VALUES "+
+						strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(dataInsert)/6)[1:],
+					dataInsert...)
+				if err != nil {
+					log.Print(err)
+				}
 			}
 		}
 	}
