@@ -214,7 +214,7 @@ func init() {
 func main() {
 	http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
 	go func() {
-		log.Println(http.ListenAndServe(":6060", nil))
+		fmt.Println(http.ListenAndServe(":6060", nil))
 	}()
 
 	e := echo.New()
