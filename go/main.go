@@ -1220,8 +1220,8 @@ func getTrend(c echo.Context) error {
 var insertState []*sql.Stmt
 
 func prepareInsert() {
-	insertState = make([]*sql.Stmt, 1000)
-	for i := 1; i < 1000; i++ {
+	insertState = make([]*sql.Stmt, 2000)
+	for i := 1; i < 2000; i++ {
 		var err error
 		insertState[i], err = db.Prepare(
 			"INSERT INTO `isu_condition`" +
