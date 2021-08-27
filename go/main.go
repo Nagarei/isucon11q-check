@@ -245,6 +245,7 @@ func main() {
 	}
 	db.SetMaxOpenConns(10)
 	defer db.Close()
+	prepareInsert()
 
 	postIsuConditionTargetBaseURL = os.Getenv("POST_ISUCONDITION_TARGET_BASE_URL")
 	if postIsuConditionTargetBaseURL == "" {
@@ -1166,6 +1167,24 @@ func getTrend(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+var insertState []*sql.Stmt
+
+func prepareInsert() {
+	insertState = make([]*sql.Stmt, 20)
+	for i := 1; i < 20; i++ {
+		var err error
+		insertState[i], err = db.Prepare(
+			"INSERT INTO `isu_condition`" +
+				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+				"	VALUES " +
+				strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
+		if err != nil {
+			panic(err)
+		}
+	}
+
+}
+
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
@@ -1216,12 +1235,7 @@ func postIsuCondition(c echo.Context) error {
 
 	}
 
-	_, err = db.Exec(
-		"INSERT INTO `isu_condition`"+
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-			"	VALUES "+
-			strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(req))[1:],
-		data...)
+	_, err = insertState[len(req)].Exec(data...)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
