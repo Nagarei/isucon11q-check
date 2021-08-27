@@ -1195,8 +1195,9 @@ func getTrend(c echo.Context) error {
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
 	c.Response().WriteHeader(http.StatusOK)
 	trendCacheMutex.RLock()
-	defer trendCacheMutex.RUnlock()
-	_, err := c.Response().Write(trendCache)
+	cache := trendCache
+	trendCacheMutex.RUnlock()
+	_, err := c.Response().Write(cache)
 	return err
 	//return c.JSON(http.StatusOK, res)
 }
