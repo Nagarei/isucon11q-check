@@ -244,7 +244,16 @@ func main() {
 	e.GET("/isu/:jia_isu_uuid/condition", getIndex)
 	e.GET("/isu/:jia_isu_uuid/graph", getIndex)
 	e.GET("/register", getIndex)
-	e.Static("/assets", frontendContentsPath+"/assets")
+	e.GET("/assets/favicon.d0f5f504.svg", getAssets("/favicon.d0f5f504.svg"))
+	e.GET("/assets/favicon_black.svg", getAssets("/favicon_black.svg"))
+	e.GET("/assets/favicon_orange.svg", getAssets("/favicon_orange.svg"))
+	e.GET("/assets/favicon_white.svg", getAssets("/favicon_white.svg"))
+	e.GET("/assets/index.144d8ca8.css", getAssets("/index.144d8ca8.css"))
+	e.GET("/assets/index.f8c2722b.js", getAssets("/index.f8c2722b.js"))
+	e.GET("/assets/logo_black.svg", getAssets("/logo_black.svg"))
+	e.GET("/assets/logo_orange.svg", getAssets("/logo_orange.svg"))
+	e.GET("/assets/logo_white.svg", getAssets("/logo_white.svg"))
+	e.GET("/assets/vendor.d5e1a410.js", getAssets("/vendor.d5e1a410.js"))
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
@@ -723,6 +732,7 @@ func getIsuIcon(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
 	return c.Blob(http.StatusOK, "", image)
 }
 
@@ -1319,5 +1329,13 @@ func isValidConditionFormat(conditionStr string) bool {
 }
 
 func getIndex(c echo.Context) error {
+	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
 	return c.File(frontendContentsPath + "/index.html")
+}
+
+func getAssets(path string) func(c echo.Context) error {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("Cache-Control", "public, max-age=86400")
+		return c.File(frontendContentsPath + "/assets" + path)
+	}
 }
