@@ -1217,21 +1217,21 @@ func getTrend(c echo.Context) error {
 	//return c.JSON(http.StatusOK, res)
 }
 
-var insertState []*sql.Stmt
+//var insertState []*sql.Stmt
 
 func prepareInsert() {
-	insertState = make([]*sql.Stmt, 20)
-	for i := 1; i < 20; i++ {
-		var err error
-		insertState[i], err = db.Prepare(
-			"INSERT INTO `isu_condition`" +
-				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
-				"	VALUES " +
-				strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
-		if err != nil {
-			panic(err)
-		}
-	}
+	// insertState = make([]*sql.Stmt, 20)
+	// for i := 1; i < 20; i++ {
+	// 	var err error
+	// 	insertState[i], err = db.Prepare(
+	// 		"INSERT INTO `isu_condition`" +
+	// 			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+	// 			"	VALUES " +
+	// 			strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 }
 
 var insertDataMutex sync.Mutex
@@ -1247,18 +1247,25 @@ func insertIsuCondition() {
 		insertData = make([]interface{}, 0, cap(data))
 		insertDataMutex.Unlock()
 
-		if len(insertData) == 0 {
+		if len(data) == 0 {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		_, err := db.Exec(
-			"INSERT INTO `isu_condition`"+
-				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-				"	VALUES "+
-				strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(data))[1:],
-			data...)
-		if err != nil {
-			log.Print(err)
+		for i := 0; i < len(data); i += 6 * 1000 {
+			end := i + 6*1000
+			if len(data) < end {
+				end = len(data)
+			}
+			dataInsert := data[i:end]
+			_, err := db.Exec(
+				"INSERT INTO `isu_condition`"+
+					"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+					"	VALUES "+
+					strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(dataInsert)/6)[1:],
+				dataInsert...)
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 }
