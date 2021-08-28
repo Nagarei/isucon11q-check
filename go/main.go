@@ -1169,7 +1169,7 @@ var trendCache []byte
 func calcTrend() {
 loopstart:
 	for {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1300 * time.Millisecond)
 
 		characterList := []Isu{}
 		err := db.Select(&characterList, "SELECT `character` FROM `isu` GROUP BY `character`")

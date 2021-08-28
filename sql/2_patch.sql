@@ -1,6 +1,6 @@
 
 
-
+ALTER TABLE `isu` MODIFY `image` LONGBLOB INVISIBLE;
 
 ALTER TABLE `isu_condition` DROP id;
 ALTER TABLE `isu_condition` DROP created_at;
