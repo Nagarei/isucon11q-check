@@ -332,6 +332,20 @@ func postInitialize(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
 
+	isuList := []string{}
+	err = db.Select(&isuList, "select jia_isu_uuid from isu")
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	for _, uuid := range isuList {
+		_, err = db.Exec("drop table `" + uuid + "`")
+		if err != nil {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+
 	cmd := exec.Command("../sql/init.sh")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr
@@ -349,6 +363,33 @@ func postInitialize(c echo.Context) error {
 	if err != nil {
 		c.Logger().Errorf("db error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	err = db.Select(&isuList, "select jia_isu_uuid from isu")
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	for _, uuid := range isuList {
+		_, err = db.Exec("create table `" + uuid + "` ("+
+			"  `jia_isu_uuid` CHAR(36) NOT NULL,"+
+			"  `timestamp` DATETIME NOT NULL,"+
+			"  `is_sitting` TINYINT(1) NOT NULL,"+
+			"  `condition` VARCHAR(255) NOT NULL,"+
+			"  `condition_level` VARCHAR(1) NOT NULL,"+
+			"  `message` VARCHAR(255) NOT NULL,"+
+			"   PRIMARY KEY(`timestamp` DESC)"+
+			") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4"
+		)
+		if err != nil {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		_, err = db.Exec("INSERT INTO `" + uuid + "` SELECT * from `isu_condition` where `jia_isu_uuid`=?", uuid)
+		if err != nil {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
 	}
 
 	return c.JSON(http.StatusOK, InitializeResponse{
@@ -493,8 +534,7 @@ func getIsuList(c echo.Context) error {
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
 		foundLastCondition := true
-		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-			isu.JIAIsuUUID)
+		err = tx.Get(&lastCondition, "SELECT * FROM `"+isu.JIAIsuUUID+"` ORDER BY `timestamp` DESC LIMIT 1")
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
@@ -587,6 +627,21 @@ func postIsu(c echo.Context) error {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
+	}
+	
+	_, err = db.Exec("create table `" + jiaIsuUUID + "` ("+
+		"  `jia_isu_uuid` CHAR(36) NOT NULL,"+
+		"  `timestamp` DATETIME NOT NULL,"+
+		"  `is_sitting` TINYINT(1) NOT NULL,"+
+		"  `condition` VARCHAR(255) NOT NULL,"+
+		"  `condition_level` VARCHAR(1) NOT NULL,"+
+		"  `message` VARCHAR(255) NOT NULL,"+
+		"   PRIMARY KEY(`timestamp` DESC)"+
+		") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4"
+	)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	tx, err := db.Beginx()
@@ -801,8 +856,8 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	var startTimeInThisHour time.Time
 	var condition IsuCondition
 
-	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND ? <= `timestamp` AND `timestamp` < ? ORDER BY `timestamp` ASC",
-		jiaIsuUUID, graphDate, graphDate.Add(time.Hour*24))
+	rows, err := tx.Queryx("SELECT * FROM `"+jiaIsuUUID+"` WHERE ? <= `timestamp` AND `timestamp` < ? ORDER BY `timestamp` ASC",
+		graphDate, graphDate.Add(time.Hour*24))
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
@@ -1037,8 +1092,8 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 
 	var query string
 	var params []interface{}
-	query = "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?" +
-		"	AND `timestamp` < ?"
+	query = "SELECT * FROM `"+jiaIsuUUID+"` WHERE " +
+		"	`timestamp` < ?"
 	params = []interface{}{jiaIsuUUID, endTime}
 	if startTime.IsZero() {
 	} else {
@@ -1143,8 +1198,7 @@ loopstart:
 			for _, isu := range isuList {
 				conditions := []IsuCondition{}
 				err = db.Select(&conditions,
-					"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC LIMIT 1",
-					isu.JIAIsuUUID,
+					"SELECT * FROM `"+isu.JIAIsuUUID+"` ORDER BY timestamp DESC LIMIT 1",
 				)
 				if err != nil {
 					//c.Logger().Errorf("db error: %v", err)
@@ -1217,65 +1271,65 @@ func getTrend(c echo.Context) error {
 	//return c.JSON(http.StatusOK, res)
 }
 
-var insertState2000 *sql.Stmt
+// var insertState2000 *sql.Stmt
 
-func prepareInsert() {
-	// insertState = make([]*sql.Stmt, 2000)
-	// for i := 1; i < 2000; i++ {
-	// }
-	var err error
-	insertState2000, err = db.Prepare(
-		"INSERT INTO `isu_condition`" +
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
-			"	VALUES " +
-			strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
-	if err != nil {
-		panic(err)
-	}
-}
+// func prepareInsert() {
+// 	// insertState = make([]*sql.Stmt, 2000)
+// 	// for i := 1; i < 2000; i++ {
+// 	// }
+// 	var err error
+// 	insertState2000, err = db.Prepare(
+// 		"INSERT INTO `isu_condition`" +
+// 			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+// 			"	VALUES " +
+// 			strings.Repeat(",(?, ?, ?, ?, ?, ?)", i)[1:])
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
 
-var insertDataMutex sync.Mutex
-var insertData = []interface{}{}
+// var insertDataMutex sync.Mutex
+// var insertData = []interface{}{}
 
-func init() {
-	go insertIsuCondition()
-}
-func insertIsuCondition() {
-	for {
-		insertDataMutex.Lock()
-		data := insertData
-		insertData = make([]interface{}, 0, cap(data))
-		insertDataMutex.Unlock()
+// func init() {
+// 	go insertIsuCondition()
+// }
+// func insertIsuCondition() {
+// 	for {
+// 		insertDataMutex.Lock()
+// 		data := insertData
+// 		insertData = make([]interface{}, 0, cap(data))
+// 		insertDataMutex.Unlock()
 
-		if len(data) == 0 {
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-		for i := 0; i < len(data); i += 6 * 2000 {
-			end := i + 6*2000
-			if len(data) < end {
-				end = len(data)
-			}
-			dataInsert := data[i:end]
-			if end-i == 6*2000 {
-				_, err := insertState2000.Exec(dataInsert...)
-				if err != nil {
-					log.Print(err)
-				}
-			} else {
-				_, err := db.Exec(
-					"INSERT INTO `isu_condition`"+
-						"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-						"	VALUES "+
-						strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(dataInsert)/6)[1:],
-					dataInsert...)
-				if err != nil {
-					log.Print(err)
-				}
-			}
-		}
-	}
-}
+// 		if len(data) == 0 {
+// 			time.Sleep(100 * time.Millisecond)
+// 			continue
+// 		}
+// 		for i := 0; i < len(data); i += 6 * 2000 {
+// 			end := i + 6*2000
+// 			if len(data) < end {
+// 				end = len(data)
+// 			}
+// 			dataInsert := data[i:end]
+// 			if end-i == 6*2000 {
+// 				_, err := insertState2000.Exec(dataInsert...)
+// 				if err != nil {
+// 					log.Print(err)
+// 				}
+// 			} else {
+// 				_, err := db.Exec(
+// 					"INSERT INTO `isu_condition`"+
+// 						"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+// 						"	VALUES "+
+// 						strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(dataInsert)/6)[1:],
+// 					dataInsert...)
+// 				if err != nil {
+// 					log.Print(err)
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
@@ -1327,14 +1381,24 @@ func postIsuCondition(c echo.Context) error {
 
 	}
 
-	insertDataMutex.Lock()
-	insertData = append(insertData, data...)
-	insertDataMutex.Unlock()
+	// insertDataMutex.Lock()
+	// insertData = append(insertData, data...)
+	// insertDataMutex.Unlock()
 	// _, err = insertState[len(req)].Exec(data...)
 	// if err != nil {
 	// 	c.Logger().Errorf("db error: %v", err)
 	// 	return c.NoContent(http.StatusInternalServerError)
 	// }
+	
+	_, err = db.Exec(
+		"INSERT INTO `"+jiaIsuUUID+"`" +
+			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
+			"	VALUES " +
+			strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(req))[1:], data...)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
 
 	return c.NoContent(http.StatusCreated)
 }
