@@ -371,21 +371,21 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, uuid := range isuList {
-		_, err = db.Exec("create table `" + uuid + "` ("+
-			"  `jia_isu_uuid` CHAR(36) NOT NULL,"+
-			"  `timestamp` DATETIME NOT NULL,"+
-			"  `is_sitting` TINYINT(1) NOT NULL,"+
-			"  `condition` VARCHAR(255) NOT NULL,"+
-			"  `condition_level` VARCHAR(1) NOT NULL,"+
-			"  `message` VARCHAR(255) NOT NULL,"+
-			"   PRIMARY KEY(`timestamp` DESC)"+
+		_, err = db.Exec("create table `" + uuid + "` (" +
+			"  `jia_isu_uuid` CHAR(36) NOT NULL," +
+			"  `timestamp` DATETIME NOT NULL," +
+			"  `is_sitting` TINYINT(1) NOT NULL," +
+			"  `condition` VARCHAR(255) NOT NULL," +
+			"  `message` VARCHAR(255) NOT NULL," +
+			"  `condition_level` VARCHAR(1) NOT NULL," +
+			"   PRIMARY KEY(`timestamp` DESC)" +
 			") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4",
 		)
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-		_, err = db.Exec("INSERT INTO `" + uuid + "` SELECT * from `isu_condition` where `jia_isu_uuid`=?", uuid)
+		_, err = db.Exec("INSERT INTO `"+uuid+"` SELECT * from `isu_condition` where `jia_isu_uuid`=?", uuid)
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -628,15 +628,15 @@ func postIsu(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
-	
-	_, err = db.Exec("create table `" + jiaIsuUUID + "` ("+
-		"  `jia_isu_uuid` CHAR(36) NOT NULL,"+
-		"  `timestamp` DATETIME NOT NULL,"+
-		"  `is_sitting` TINYINT(1) NOT NULL,"+
-		"  `condition` VARCHAR(255) NOT NULL,"+
-		"  `condition_level` VARCHAR(1) NOT NULL,"+
-		"  `message` VARCHAR(255) NOT NULL,"+
-		"   PRIMARY KEY(`timestamp` DESC)"+
+
+	_, err = db.Exec("create table `" + jiaIsuUUID + "` (" +
+		"  `jia_isu_uuid` CHAR(36) NOT NULL," +
+		"  `timestamp` DATETIME NOT NULL," +
+		"  `is_sitting` TINYINT(1) NOT NULL," +
+		"  `condition` VARCHAR(255) NOT NULL," +
+		"  `message` VARCHAR(255) NOT NULL," +
+		"  `condition_level` VARCHAR(1) NOT NULL," +
+		"   PRIMARY KEY(`timestamp` DESC)" +
 		") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4",
 	)
 	if err != nil {
@@ -1092,7 +1092,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 
 	var query string
 	var params []interface{}
-	query = "SELECT * FROM `"+jiaIsuUUID+"` WHERE " +
+	query = "SELECT * FROM `" + jiaIsuUUID + "` WHERE " +
 		"	`timestamp` < ?"
 	params = []interface{}{jiaIsuUUID, endTime}
 	if startTime.IsZero() {
@@ -1389,11 +1389,11 @@ func postIsuCondition(c echo.Context) error {
 	// 	c.Logger().Errorf("db error: %v", err)
 	// 	return c.NoContent(http.StatusInternalServerError)
 	// }
-	
+
 	_, err = db.Exec(
-		"INSERT INTO `"+jiaIsuUUID+"`" +
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)" +
-			"	VALUES " +
+		"INSERT INTO `"+jiaIsuUUID+"`"+
+			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+			"	VALUES "+
 			strings.Repeat(",(?, ?, ?, ?, ?, ?)", len(req))[1:], data...)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
