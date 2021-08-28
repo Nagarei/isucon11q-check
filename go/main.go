@@ -265,7 +265,7 @@ func main() {
 	}
 	db.SetMaxOpenConns(10)
 	defer db.Close()
-	prepareInsert()
+	//prepareInsert()
 
 	postIsuConditionTargetBaseURL = os.Getenv("POST_ISUCONDITION_TARGET_BASE_URL")
 	if postIsuConditionTargetBaseURL == "" {
@@ -379,7 +379,7 @@ func postInitialize(c echo.Context) error {
 			"  `condition_level` VARCHAR(1) NOT NULL,"+
 			"  `message` VARCHAR(255) NOT NULL,"+
 			"   PRIMARY KEY(`timestamp` DESC)"+
-			") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4"
+			") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4",
 		)
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
@@ -637,7 +637,7 @@ func postIsu(c echo.Context) error {
 		"  `condition_level` VARCHAR(1) NOT NULL,"+
 		"  `message` VARCHAR(255) NOT NULL,"+
 		"   PRIMARY KEY(`timestamp` DESC)"+
-		") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4"
+		") ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4",
 	)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
