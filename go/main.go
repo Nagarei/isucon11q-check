@@ -339,7 +339,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, uuid := range isuList {
-		_, err = db.Exec("drop table IF EXISTS`" + uuid + "`")
+		_, err = db.Exec("drop table IF EXISTS `" + uuid + "`")
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -365,6 +365,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	isuList = []string{}
 	err = db.Select(&isuList, "select jia_isu_uuid from isu")
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
@@ -629,7 +630,7 @@ func postIsu(c echo.Context) error {
 		}
 	}
 
-	_, err = db.Exec("create table `" + jiaIsuUUID + "` (" +
+	_, err = db.Exec("create table if not exists `" + jiaIsuUUID + "` (" +
 		"  `jia_isu_uuid` CHAR(36) NOT NULL," +
 		"  `timestamp` DATETIME NOT NULL," +
 		"  `is_sitting` TINYINT(1) NOT NULL," +
@@ -1094,7 +1095,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	var params []interface{}
 	query = "SELECT * FROM `" + jiaIsuUUID + "` WHERE " +
 		"	`timestamp` < ?"
-	params = []interface{}{jiaIsuUUID, endTime}
+	params = []interface{}{endTime}
 	if startTime.IsZero() {
 	} else {
 		query += "	AND ? <= `timestamp`"
